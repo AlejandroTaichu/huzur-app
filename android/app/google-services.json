@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "346587036312",
+    "project_id": "huzur-app-45419",
+    "storage_bucket": "huzur-app-45419.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:346587036312:android:3f851485d0ebe9a58f6eed",
+        "android_client_info": {
+          "package_name": "com.example.huzur_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBKPDZVfsDQES8CqPwBbU3AB0NoYR2Fy6M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
