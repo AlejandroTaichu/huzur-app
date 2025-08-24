@@ -1,6 +1,8 @@
 // lib/screens/auth/login_ekrani.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:huzur_app/main.dart';
+import 'package:huzur_app/screens/sureler_ekrani.dart';
 
 class LoginEkrani extends StatefulWidget {
   const LoginEkrani({super.key});
@@ -15,14 +17,20 @@ class _LoginEkraniState extends State<LoginEkrani> {
   bool _isLogin = true;
   bool _isLoading = false;
 
+  // Bu fonksiyon, tüm Firebase işlemlerini tek bir yerden yönetir.
   Future<void> _handleAuthAction(
     Future<UserCredential> Function() authAction,
   ) async {
-    // Bu fonksiyon, tüm giriş/kayıt işlemlerini tek bir yerden yönetir.
     if (mounted) setState(() => _isLoading = true);
     try {
-      await authAction();
-      // Yönlendirme burada yapılmaz, Yönlendirici (AuthYonlendirme) bunu halleder.
+      final credential = await authAction();
+
+      // Başarılı giriş sonrası ana sayfaya yönlendir
+      if (credential.user != null && mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const AnaSayfa()),
+        );
+      }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
