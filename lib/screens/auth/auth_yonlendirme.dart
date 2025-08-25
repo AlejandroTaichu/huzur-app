@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:huzur_app/screens/ana_menu_ekrani.dart';
 import 'package:huzur_app/screens/auth/login_ekran.dart';
-import 'package:huzur_app/screens/sureler_ekrani.dart'; // Yeni import
 
 class AuthYonlendirme extends StatefulWidget {
   const AuthYonlendirme({super.key});
@@ -30,6 +29,7 @@ class _AuthYonlendirmeState extends State<AuthYonlendirme> {
 
     setState(() {
       if (user != null) {
+        // ✅ AnaMenuEkrani'na yönlendir - AnaSayfa değil
         _currentScreen = const AnaMenuEkrani();
       } else {
         _currentScreen = const LoginEkrani();
@@ -37,7 +37,7 @@ class _AuthYonlendirmeState extends State<AuthYonlendirme> {
       _isInitialized = true;
     });
 
-    // Auth değişikliklerini dinle ama sadece gerekli durumlarda screen değiştir
+    // Auth değişikliklerini dinle
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (!mounted) return;
 
@@ -46,13 +46,13 @@ class _AuthYonlendirmeState extends State<AuthYonlendirme> {
       );
 
       // Sadece gerçek durum değişikliklerinde screen değiştir
-      final shouldShowAnaSayfa = user != null;
-      final isCurrentlyShowingAnaSayfa = _currentScreen is AnaSayfa;
+      final shouldShowAnaMenu = user != null;
+      final isCurrentlyShowingAnaMenu = _currentScreen is AnaMenuEkrani;
 
-      if (shouldShowAnaSayfa != isCurrentlyShowingAnaSayfa) {
+      if (shouldShowAnaMenu != isCurrentlyShowingAnaMenu) {
         setState(() {
-          _currentScreen = shouldShowAnaSayfa
-              ? const AnaSayfa()
+          _currentScreen = shouldShowAnaMenu
+              ? const AnaMenuEkrani()
               : const LoginEkrani();
         });
       }

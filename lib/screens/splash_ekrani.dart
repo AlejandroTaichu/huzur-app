@@ -2,6 +2,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:huzur_app/screens/auth/auth_yonlendirme.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 
 class SplashEkrani extends StatefulWidget {
   const SplashEkrani({super.key});
@@ -23,6 +25,8 @@ class _SplashEkraniState extends State<SplashEkrani> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
       backgroundColor: Colors.green[800],
       body: Center(
@@ -38,6 +42,14 @@ class _SplashEkraniState extends State<SplashEkrani> {
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
+            ),
+            const SizedBox(height: 40),
+            // Geçici test butonu
+            ElevatedButton(
+              onPressed: () {
+                themeProvider.toggleTheme();
+              },
+              child: const Text("Toggle Theme"),
             ),
           ],
         ),
