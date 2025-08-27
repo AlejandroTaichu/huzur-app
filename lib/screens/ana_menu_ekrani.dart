@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:huzur_app/providers/theme_provider.dart';
 import 'package:huzur_app/screens/sureler_ekrani.dart';
-import 'package:provider/provider.dart';
+import 'package:huzur_app/screens/kible_bul_ekran.dart';
 
 class AnaMenuEkrani extends StatelessWidget {
   const AnaMenuEkrani({super.key});
@@ -63,9 +63,8 @@ class AnaMenuEkrani extends StatelessWidget {
             context,
             ikon: Icons.explore_outlined,
             isim: 'Kıble Bul',
-            sayfa: const Scaffold(
-              body: Center(child: Text("Kıble Bul (Yakında)")),
-            ),
+            // Sadece bu 'sayfa' satırını değiştiriyoruz
+            sayfa: const KibleBulEkrani(),
           ),
           _buildMenuKarti(
             context,

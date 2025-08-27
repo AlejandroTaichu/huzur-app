@@ -10,7 +10,7 @@ plugins {
 
 android {
     namespace = "com.example.huzur_app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 33
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
