@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:huzur_app/models/cuz.dart';
 import 'package:huzur_app/models/sure.dart';
-import 'package:huzur_app/screens/auth/login_ekran.dart';
 import 'package:huzur_app/screens/sure_detay_ekrani.dart';
+import 'package:huzur_app/services/login_ekran.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AnaSayfa extends StatefulWidget {

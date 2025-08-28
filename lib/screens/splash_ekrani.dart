@@ -1,7 +1,9 @@
 // lib/screens/splash_ekrani.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:huzur_app/screens/auth/auth_yonlendirme.dart';
+import 'package:huzur_app/services/auth_service.dart';
+import 'package:huzur_app/services/auth_yonlendirme.dart';
+// <-- BU SATIRI EKLEYİN
 
 class SplashEkrani extends StatefulWidget {
   const SplashEkrani({super.key});
@@ -38,7 +40,7 @@ class _SplashEkraniState extends State<SplashEkrani>
     _controller.forward();
 
     // Belirlenen süre sonunda ana ekrana geç
-    Timer(const Duration(seconds: 3), () {
+    Timer(const Duration(seconds: 2), () {
       if (mounted) {
         Navigator.pushReplacement(
           context,

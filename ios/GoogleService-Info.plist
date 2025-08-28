@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>346587036312-pgfmvbl1v1g4pr7ol0jasi0f3ru2qiqf.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.346587036312-pgfmvbl1v1g4pr7ol0jasi0f3ru2qiqf</string>
+	<key>API_KEY</key>
+	<string>AIzaSyC6z9KJ6yO9GND8f3VAJO7Dt5-Rslf-hQU</string>
+	<key>GCM_SENDER_ID</key>
+	<string>346587036312</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.huzurApp</string>
+	<key>PROJECT_ID</key>
+	<string>huzur-app-45419</string>
+	<key>STORAGE_BUCKET</key>
+	<string>huzur-app-45419.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:346587036312:ios:3d9efb73d226439e8f6eed</string>
+</dict>
+</plist>

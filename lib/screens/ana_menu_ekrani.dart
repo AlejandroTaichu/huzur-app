@@ -1,6 +1,11 @@
 // lib/screens/ana_menu_ekrani.dart
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:huzur_app/services/login_ekran.dart';
 import 'package:flutter/material.dart';
 import 'package:huzur_app/screens/guzel_sozler_ekrani.dart';
+import 'package:huzur_app/screens/profil_ekrani.dart';
+import 'package:huzur_app/services/auth_service.dart';
 import 'package:provider/provider.dart';
 import 'package:huzur_app/providers/theme_provider.dart';
 import 'package:huzur_app/screens/sureler_ekrani.dart';
@@ -8,31 +13,71 @@ import 'package:huzur_app/screens/kible_bul_ekran.dart';
 import 'package:huzur_app/screens/ayetler_ekrani.dart';
 import 'package:huzur_app/screens/namaz_vakitleri_ekrani.dart';
 
-class AnaMenuEkrani extends StatelessWidget {
+class AnaMenuEkrani extends StatefulWidget {
   const AnaMenuEkrani({super.key});
 
   @override
+  State<AnaMenuEkrani> createState() => _AnaMenuEkraniState();
+}
+
+class _AnaMenuEkraniState extends State<AnaMenuEkrani> {
+  final AuthService _authService = AuthService();
+  User? _user;
+
+  @override
+  void initState() {
+    super.initState();
+    _user = FirebaseAuth.instance.currentUser;
+  }
+
+  void _updateUserState() {
+    if (mounted) {
+      setState(() {
+        _user = FirebaseAuth.instance.currentUser;
+      });
+    }
+  }
+
+  void _handleProfileTap() {
+    if (_user != null && _user!.isAnonymous) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginEkrani()),
+      ).then((_) => _updateUserState());
+    } else if (_user != null) {
+      // Artık ModalBottomSheet yerine ProfilEkrani'na yönlendiriyoruz
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfilEkrani()),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Yeni tema renklerimizi burada tanımlıyoruz
     final Color backgroundColor = const Color(0xFF0A0E27);
     final Color primaryTextColor = Colors.white;
-    final Color secondaryTextColor = Colors.white.withOpacity(0.7);
     final Color accentColor = Colors.blue.shade300;
 
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text(
-          'Huzur Uygulaması',
-          style: TextStyle(
-            color: primaryTextColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: Colors.transparent, // Arka planı şeffaf yapıyoruz
-        elevation: 0, // Gölgeleri kaldırıyoruz
+        title: Text('Huzur Uygulaması',
+            style: TextStyle(
+                color: primaryTextColor, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
-          // Theme toggle butonu
+          IconButton(
+            icon: Icon(
+              _user != null && _user!.isAnonymous
+                  ? Icons.person_add_alt_1
+                  : Icons.person,
+              color: primaryTextColor,
+            ),
+            tooltip: 'Profil ve Oturum',
+            onPressed: _handleProfileTap,
+          ),
           Consumer<ThemeProvider>(
             builder: (context, themeProvider, child) {
               return IconButton(
@@ -56,60 +101,49 @@ class AnaMenuEkrani extends StatelessWidget {
         crossAxisSpacing: 20.0,
         mainAxisSpacing: 20.0,
         children: <Widget>[
-          _buildMenuKarti(
-            context,
-            ikon: Icons.book_outlined,
-            isim: 'Sureler',
-            sayfa: const AnaSayfa(),
-            accentColor: accentColor,
-            textColor: primaryTextColor,
-          ),
-          _buildMenuKarti(
-            context,
-            ikon: Icons.format_quote_outlined,
-            isim: 'Ayetler',
-            sayfa: const AyetlerEkrani(),
-            accentColor: accentColor,
-            textColor: primaryTextColor,
-          ),
-          _buildMenuKarti(
-            context,
-            ikon: Icons.article_outlined,
-            isim: 'Güzel Sözler',
-            sayfa: const GuzelSozlerEkrani(),
-            accentColor: accentColor,
-            textColor: primaryTextColor,
-          ),
-          _buildMenuKarti(
-            context,
-            ikon: Icons.explore_outlined,
-            isim: 'Kıble Bul',
-            sayfa: const KibleBulEkrani(),
-            accentColor: accentColor,
-            textColor: primaryTextColor,
-          ),
-          _buildMenuKarti(
-            context,
-            ikon: Icons.schedule_outlined,
-            isim: 'Namaz Vakitleri',
-            sayfa: const NamazVakitleriEkrani(),
-            accentColor: accentColor,
-            textColor: primaryTextColor,
-          ),
-          _buildMenuKarti(
-            context,
-            ikon: Icons.settings_outlined,
-            isim: 'Ayarlar',
-            sayfa: const SettingsScreen(),
-            accentColor: accentColor,
-            textColor: primaryTextColor,
-          ),
+          _buildMenuKarti(context,
+              ikon: Icons.book_outlined,
+              isim: 'Sureler',
+              sayfa:
+                  const AnaSayfa(), // Bu StatefulWidget ama const constructor'a sahip
+              accentColor: accentColor,
+              textColor: primaryTextColor),
+          _buildMenuKarti(context,
+              ikon: Icons.format_quote_outlined,
+              isim: 'Ayetler',
+              sayfa: AyetlerEkrani(), // <-- 'const' kaldırıldı
+              accentColor: accentColor,
+              textColor: primaryTextColor),
+          _buildMenuKarti(context,
+              ikon: Icons.article_outlined,
+              isim: 'Güzel Sözler',
+              sayfa: GuzelSozlerEkrani(), // <-- 'const' kaldırıldı
+              accentColor: accentColor,
+              textColor: primaryTextColor),
+          _buildMenuKarti(context,
+              ikon: Icons.explore_outlined,
+              isim: 'Kıble Bul',
+              sayfa: KibleBulEkrani(), // <-- 'const' kaldırıldı
+              accentColor: accentColor,
+              textColor: primaryTextColor),
+          _buildMenuKarti(context,
+              ikon: Icons.schedule_outlined,
+              isim: 'Namaz Vakitleri',
+              sayfa: NamazVakitleriEkrani(), // <-- 'const' kaldırıldı
+              accentColor: accentColor,
+              textColor: primaryTextColor),
+          _buildMenuKarti(context,
+              ikon: Icons.settings_outlined,
+              isim: 'Ayarlar',
+              sayfa:
+                  const SettingsScreen(), // Bu StatelessWidget, const kalabilir
+              accentColor: accentColor,
+              textColor: primaryTextColor),
         ],
       ),
     );
   }
 
-  // YENİ TASARIMA UYGUN KART WIDGET'I
   Widget _buildMenuKarti(
     BuildContext context, {
     required IconData ikon,
@@ -128,7 +162,7 @@ class AnaMenuEkrani extends StatelessWidget {
           gradient: LinearGradient(
             colors: [
               Colors.blue.withOpacity(0.1),
-              Colors.purple.withOpacity(0.1),
+              Colors.purple.withOpacity(0.1)
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -139,20 +173,13 @@ class AnaMenuEkrani extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Icon(
-              ikon,
-              size: 50.0,
-              color: accentColor,
-            ),
+            Icon(ikon, size: 50.0, color: accentColor),
             const SizedBox(height: 12.0),
-            Text(
-              isim,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            Text(isim,
+                style: TextStyle(
+                    color: textColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -160,10 +187,8 @@ class AnaMenuEkrani extends StatelessWidget {
   }
 }
 
-// Ayarlar Ekranı (Temayı yeni arka plana uyumlu hale getirmek için küçük bir güncelleme)
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -203,7 +228,6 @@ class SettingsScreen extends StatelessWidget {
               },
             ),
           ),
-          // Diğer ayar kartları da benzer şekilde tasarlanabilir...
         ],
       ),
     );
