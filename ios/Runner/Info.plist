@@ -45,13 +45,20 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Kıble yönünü doğru bir şekilde hesaplamak için konumunuza ihtiyaç var.</string>
-
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>Kıble yönünü doğru bir şekilde hesaplamak için konumunuza ihtiyaç var.</string>
-
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Kıble yönünü doğru bir şekilde hesaplamak için konumunuza ihtiyaç var.</string>
+	
+	<key>NSLocalNetworkUsageDescription</key>
+    <string>Uygulamanın geliştirme ve hata ayıklama araçlarıyla iletişim kurması için yerel ağ erişimi gereklidir.</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_dartobservatory._tcp</string>
+    </array>
+
 </dict>
 </plist>

@@ -1,3 +1,5 @@
+// lib/screens/sureler_ekrani.dart
+
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -20,21 +22,17 @@ class _AnaSayfaState extends State<AnaSayfa> {
   List<Cuz> gruplanmisCuzler = [];
   List<Sure> aramaSonuclari = [];
   final TextEditingController _aramaController = TextEditingController();
+
   Sure? sonOkunanSure;
+  int? sonOkunanAyetIndex;
+
   User? _user;
   bool _aramaYapiliyor = false;
 
   @override
   void initState() {
     super.initState();
-    // ❌ Bu listener'ı kaldırıyoruz - AuthYonlendirme hallediyor
-    // FirebaseAuth.instance.authStateChanges().listen((User? user) {
-    //   if (mounted) setState(() => _user = user);
-    // });
-
-    // ✅ İlk user state'ini al - tek sefer
     _user = FirebaseAuth.instance.currentUser;
-
     _initialize();
   }
 
@@ -47,17 +45,12 @@ class _AnaSayfaState extends State<AnaSayfa> {
 
   Future<void> veriYukle() async {
     if (!mounted) return;
-
     final cevap = await rootBundle.loadString('assets/kuran_tr.json');
     if (!mounted) return;
-
     final List<dynamic> data = json.decode(cevap);
-
-    final sureListesi = data
-        .map((sureJson) => Sure.fromJson(sureJson))
-        .toList();
+    final sureListesi =
+        data.map((sureJson) => Sure.fromJson(sureJson)).toList();
     final cuzListesi = _sureleriCuzlereGoreGrupla(sureListesi);
-
     if (mounted) {
       setState(() {
         tumSureler = sureListesi;
@@ -97,14 +90,12 @@ class _AnaSayfaState extends State<AnaSayfa> {
       51,
       58,
       67,
-      78,
+      78
     ];
-
     List<Cuz> cuzler = [];
     for (int i = 0; i < 30; i++) {
       final int baslangicSureNo = cuzBaslangicSureleri[i];
       final int bitisSureNo = (i + 1 < 30) ? cuzBaslangicSureleri[i + 1] : 115;
-
       final cuzSureleri = sureler
           .where((s) => s.chapter >= baslangicSureNo && s.chapter < bitisSureNo)
           .toList();
@@ -127,56 +118,70 @@ class _AnaSayfaState extends State<AnaSayfa> {
 
   Future<void> _sonOkunaniYukle() async {
     if (!mounted) return;
-
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
 
     final int? sonOkunanSureNo = prefs.getInt('sonOkunanSureNo');
+    final int? okunanAyetIndex = prefs.getInt('sonOkunanAyetIndex');
+
     if (sonOkunanSureNo != null && tumSureler.isNotEmpty) {
       try {
-        final bulunanSure = tumSureler.firstWhere(
-          (s) => s.chapter == sonOkunanSureNo,
-        );
+        final bulunanSure =
+            tumSureler.firstWhere((s) => s.chapter == sonOkunanSureNo);
         if (mounted) {
           setState(() {
             sonOkunanSure = bulunanSure;
+            sonOkunanAyetIndex = okunanAyetIndex;
           });
         }
       } catch (e) {
         print("Kaydedilmiş sure bulunamadı: $sonOkunanSureNo");
       }
-    }
-  }
-
-  Future<void> _sonOkunaniKaydet(Sure sure) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null && !user.isAnonymous) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('sonOkunanSureNo', sure.chapter);
+    } else {
+      if (mounted) {
+        setState(() {
+          sonOkunanSure = null;
+          sonOkunanAyetIndex = null;
+        });
+      }
     }
   }
 
   Widget _buildSonOkunanKarti() {
-    if (sonOkunanSure == null || (_user != null && _user!.isAnonymous)) {
+    if (sonOkunanSure == null) {
       return const SizedBox.shrink();
     }
-    return Card(
-      color: Colors.green[50],
-      margin: const EdgeInsets.all(8.0),
-      child: ListTile(
-        leading: const Icon(Icons.bookmark, color: Colors.green),
-        title: const Text(
-          'Kaldığın Yerden Devam Et',
-          style: TextStyle(fontWeight: FontWeight.bold),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.green.withOpacity(0.1),
+            Colors.blue.withOpacity(0.1),
+          ],
         ),
-        subtitle: Text("${sonOkunanSure!.name} Suresi"),
-        onTap: () {
-          Navigator.push(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: ListTile(
+        leading: Icon(Icons.bookmark, color: Colors.green.shade300),
+        title: Text(
+          'Kaldığın Yerden Devam Et',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        subtitle: Text("${sonOkunanSure!.name} Suresi",
+            style: TextStyle(color: Colors.white.withOpacity(0.7))),
+        onTap: () async {
+          await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => SureDetay_Ekrani(sure: sonOkunanSure!),
+              builder: (context) => SureDetay_Ekrani(
+                sure: sonOkunanSure!,
+                baslangicAyetIndex: sonOkunanAyetIndex,
+              ),
             ),
           );
+          _sonOkunaniYukle();
         },
       ),
     );
@@ -186,7 +191,6 @@ class _AnaSayfaState extends State<AnaSayfa> {
     FirebaseAuth.instance.signOut();
   }
 
-  // ✅ User state'ini manuel güncelleme fonksiyonu
   void _updateUserState() {
     if (mounted) {
       setState(() {
@@ -198,10 +202,12 @@ class _AnaSayfaState extends State<AnaSayfa> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF0A0E27),
       appBar: AppBar(
-        title: const Text('Huzur Uygulaması - Sureler'),
-        backgroundColor: Colors.green[800],
-        foregroundColor: Colors.white,
+        title: const Text('Sureler', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 10.0),
@@ -214,24 +220,27 @@ class _AnaSayfaState extends State<AnaSayfa> {
                       builder: (context) => const LoginEkrani(),
                     ),
                   ).then((_) {
-                    // Login'den döndükten sonra user state'ini güncelle
                     _updateUserState();
                   });
                 } else if (_user != null) {
+                  // Daha şık bir BottomSheet
                   showModalBottomSheet(
                     context: context,
+                    backgroundColor: const Color(0xFF101439),
                     builder: (ctx) => Container(
                       padding: const EdgeInsets.all(20),
                       width: double.infinity,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            "Giriş Yapıldı: ${_user!.email}",
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
+                          Text("Giriş Yapıldı: ${_user!.email}",
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white)),
                           const SizedBox(height: 20),
                           ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red),
                             child: const Text("Çıkış Yap"),
                             onPressed: () {
                               _cikisYap();
@@ -246,12 +255,12 @@ class _AnaSayfaState extends State<AnaSayfa> {
                 }
               },
               child: CircleAvatar(
-                backgroundColor: Colors.green[100],
+                backgroundColor: Colors.blue.withOpacity(0.1),
                 child: Icon(
                   _user != null && _user!.isAnonymous
                       ? Icons.person_add_alt_1
                       : Icons.person,
-                  color: Colors.green[900],
+                  color: Colors.blue.shade300,
                 ),
               ),
             ),
@@ -262,14 +271,20 @@ class _AnaSayfaState extends State<AnaSayfa> {
         children: [
           _buildSonOkunanKarti(),
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(16.0),
             child: TextField(
               controller: _aramaController,
+              style: TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                labelText: 'Sure Ara...',
-                prefixIcon: const Icon(Icons.search),
+                hintText: 'Sure Ara...',
+                hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                prefixIcon:
+                    Icon(Icons.search, color: Colors.white.withOpacity(0.5)),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.1),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.0),
+                  borderSide: BorderSide.none,
                 ),
               ),
               onChanged: _filtrele,
@@ -287,7 +302,9 @@ class _AnaSayfaState extends State<AnaSayfa> {
 
   Widget _buildAramaSonucListesi() {
     return aramaSonuclari.isEmpty
-        ? const Center(child: Text('Arama sonucu bulunamadı.'))
+        ? const Center(
+            child: Text('Arama sonucu bulunamadı.',
+                style: TextStyle(color: Colors.white)))
         : ListView.builder(
             itemCount: aramaSonuclari.length,
             itemBuilder: (context, index) {
@@ -305,45 +322,53 @@ class _AnaSayfaState extends State<AnaSayfa> {
             itemBuilder: (context, index) {
               final cuz = gruplanmisCuzler[index];
               if (cuz.sureler.isEmpty) return const SizedBox.shrink();
-
               return ExpansionTile(
                 title: Text(
                   "${cuz.cuzNumarasi}. Cüz",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.green[800],
+                    color: Colors.blue.shade300,
+                    fontSize: 18,
                   ),
                 ),
-                children: cuz.sureler
-                    .map((sure) => _buildSureKarti(sure))
-                    .toList(),
+                children:
+                    cuz.sureler.map((sure) => _buildSureKarti(sure)).toList(),
               );
             },
           );
   }
 
   Widget _buildSureKarti(Sure sure) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.green[100],
-          child: Text(
-            sure.chapter.toString(),
-            style: TextStyle(color: Colors.green[900]),
-          ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
         ),
-        title: Text("${sure.name} Suresi"),
-        subtitle: Text('${sure.verses.length} ayet'),
-        onTap: () {
-          _sonOkunaniKaydet(sure);
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SureDetay_Ekrani(sure: sure),
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: Colors.blue.withOpacity(0.1),
+            child: Text(
+              sure.chapter.toString(),
+              style: TextStyle(
+                  color: Colors.blue.shade300, fontWeight: FontWeight.bold),
             ),
-          );
-        },
+          ),
+          title: Text("${sure.name} Suresi",
+              style: TextStyle(color: Colors.white)),
+          subtitle: Text('${sure.verses.length} ayet',
+              style: TextStyle(color: Colors.white.withOpacity(0.7))),
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SureDetay_Ekrani(sure: sure),
+              ),
+            );
+            _sonOkunaniYukle();
+          },
+        ),
       ),
     );
   }
