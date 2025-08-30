@@ -1,7 +1,6 @@
 // lib/screens/splash_ekrani.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:huzur_app/services/auth_service.dart';
 import 'package:huzur_app/services/auth_yonlendirme.dart';
 // <-- BU SATIRI EKLEYİN
 

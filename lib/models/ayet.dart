@@ -1,17 +1,32 @@
-// lib/models/ayet.dart
+// models/ayet.dart
 class Ayet {
-  final int verse;
+  final int id;
+  final int verse; // Ayet numarası için eklendi
   final String text;
   final String translation;
 
-  Ayet({required this.verse, required this.text, required this.translation});
+  Ayet({
+    required this.id,
+    required this.verse,
+    required this.text,
+    required this.translation,
+  });
 
-  // Bu factory, bir JSON parçasını (Map) Ayet nesnesine çevirir.
   factory Ayet.fromJson(Map<String, dynamic> json) {
     return Ayet(
-      verse: json['id'], // 'verse' yerine 'id' kullandık
-      text: json['text'],
-      translation: json['translation'],
+      id: json['id'] ?? 0,
+      verse: json['verse'] ?? json['id'] ?? 0, // verse yoksa id'yi kullan
+      text: json['text'] ?? '',
+      translation: json['translation'] ?? '',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'verse': verse,
+      'text': text,
+      'translation': translation,
+    };
   }
 }

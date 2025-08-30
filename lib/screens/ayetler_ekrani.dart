@@ -18,11 +18,12 @@ class AyetlerEkrani extends StatefulWidget {
 class _AyetlerEkraniState extends State<AyetlerEkrani> {
   List<Sure> _tumSureler = [];
 
-  // GÜNCELLENDİ: Sadece günün ayetini değil, öncesini, sonrasını ve ait olduğu sureyi de tutuyoruz
+  // Sadece günün ayetini değil, öncesini, sonrasını ve ait olduğu sureyi de tutuyoruz
   Sure? _gununAyetSuresi;
   Ayet? _gununAyet;
   Ayet? _ayetOnceki;
   Ayet? _ayetSonraki;
+  int _gununAyetIndex = 0; // Günün ayetinin index'i
 
   // Örnek konular listesi
   final List<Map<String, dynamic>> _konular = [
@@ -36,6 +37,8 @@ class _AyetlerEkraniState extends State<AyetlerEkrani> {
     {'isim': 'Yardımlaşma', 'ikon': Icons.group_add},
   ];
 
+  bool _yukleniyor = true;
+
   @override
   void initState() {
     super.initState();
@@ -43,12 +46,57 @@ class _AyetlerEkraniState extends State<AyetlerEkrani> {
   }
 
   Future<void> _veriYukle() async {
-    final cevap = await rootBundle.loadString('assets/kuran_tr.json');
-    final List<dynamic> data = json.decode(cevap);
-    _tumSureler = data.map((sureJson) => Sure.fromJson(sureJson)).toList();
-    _gununAyetiniSec();
-    if (mounted) {
-      setState(() {});
+    try {
+      final cevap = await rootBundle.loadString('assets/kuran_tr.json');
+      final dynamic rawData = json.decode(cevap);
+
+      List<dynamic> data;
+      if (rawData is List<dynamic>) {
+        data = rawData;
+      } else if (rawData is Map<String, dynamic>) {
+        // JSON bir obje ise, ilk array değerini al
+        final firstKey = rawData.keys.first;
+        data = rawData[firstKey] as List<dynamic>;
+      } else {
+        throw Exception("JSON formatı desteklenmiyor");
+      }
+
+      _tumSureler = data.map((sureJson) {
+        // JSON formatınıza uygun olarak Sure oluştur
+        final sureData = Map<String, dynamic>.from(sureJson);
+
+        // id'yi chapter'a çevir
+        if (sureData.containsKey('id')) {
+          sureData['chapter'] = sureData['id'];
+        }
+
+        // transliteration'ı name olarak kullan (Türkçe isim için)
+        if (sureData.containsKey('translation')) {
+          sureData['name'] = sureData['translation'];
+        }
+
+        // type'ı revelation'a çevir
+        if (sureData.containsKey('type')) {
+          sureData['revelation'] = sureData['type'];
+        }
+
+        return Sure.fromJson(sureData);
+      }).toList();
+
+      _gununAyetiniSec();
+
+      if (mounted) {
+        setState(() {
+          _yukleniyor = false;
+        });
+      }
+    } catch (e) {
+      print("Veri yükleme hatası: $e");
+      if (mounted) {
+        setState(() {
+          _yukleniyor = false;
+        });
+      }
     }
   }
 
@@ -56,17 +104,28 @@ class _AyetlerEkraniState extends State<AyetlerEkrani> {
     if (_tumSureler.isEmpty) return;
 
     final random = Random();
-    final rastgeleSure = _tumSureler[random.nextInt(_tumSureler.length)];
-    // Tek ayetli surelerde hata almamak için kontrol ekleyelim
-    if (rastgeleSure.verses.isEmpty) {
-      _gununAyetiniSec(); // Eğer sure boşsa, tekrar seç
+
+    // Boş olmayan bir sure bulana kadar dene
+    Sure? rastgeleSure;
+    int deneme = 0;
+    while (deneme < 10) {
+      // Sonsuz döngüye girmemek için limit
+      rastgeleSure = _tumSureler[random.nextInt(_tumSureler.length)];
+      if (rastgeleSure.verses.isNotEmpty) break;
+      deneme++;
+    }
+
+    if (rastgeleSure == null || rastgeleSure.verses.isEmpty) {
+      print("Uygun sure bulunamadı");
       return;
     }
+
     final rastgeleAyetIndex = random.nextInt(rastgeleSure.verses.length);
 
     setState(() {
-      _gununAyetSuresi = rastgeleSure;
+      _gununAyetSuresi = rastgeleSure!; // ! ekledik çünkü null kontrolü yaptık
       _gununAyet = rastgeleSure.verses[rastgeleAyetIndex];
+      _gununAyetIndex = rastgeleAyetIndex;
 
       // Önceki ayeti bul (eğer ilk ayet değilse)
       _ayetOnceki = (rastgeleAyetIndex > 0)
@@ -89,9 +148,28 @@ class _AyetlerEkraniState extends State<AyetlerEkrani> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _gununAyetiniSec,
+            tooltip: 'Yeni Ayet Seç',
+          ),
+        ],
       ),
-      body: _tumSureler.isEmpty
-          ? const Center(child: CircularProgressIndicator())
+      body: _yukleniyor
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text(
+                    'Ayetler yükleniyor...',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+            )
           : ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
@@ -108,7 +186,7 @@ class _AyetlerEkraniState extends State<AyetlerEkrani> {
   Widget _buildBaslik(String metin) {
     return Text(
       metin,
-      style: TextStyle(
+      style: const TextStyle(
         color: Colors.white,
         fontSize: 22,
         fontWeight: FontWeight.bold,
@@ -118,8 +196,22 @@ class _AyetlerEkraniState extends State<AyetlerEkrani> {
 
   Widget _buildGununAyetiKarti() {
     if (_gununAyet == null || _gununAyetSuresi == null) {
-      return const SizedBox.shrink();
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16.0),
+          border: Border.all(color: Colors.white.withOpacity(0.2)),
+        ),
+        child: const Center(
+          child: Text(
+            'Henüz ayet seçilmedi',
+            style: TextStyle(color: Colors.white70, fontSize: 16),
+          ),
+        ),
+      );
     }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -152,38 +244,47 @@ class _AyetlerEkraniState extends State<AyetlerEkrani> {
             ],
           ),
           const SizedBox(height: 16),
-          if (_ayetOnceki != null)
+
+          // Önceki ayet (eğer varsa)
+          if (_ayetOnceki != null) ...[
             Text(
               '"${_ayetOnceki!.translation}"',
               style: TextStyle(
-                fontSize: 17,
-                color: Colors.white.withOpacity(0.5),
+                fontSize: 15,
+                color: Colors.white.withOpacity(0.4),
                 fontStyle: FontStyle.italic,
-                height: 1.5,
+                height: 1.4,
               ),
             ),
-          if (_ayetOnceki != null) const SizedBox(height: 12),
+            const SizedBox(height: 12),
+          ],
+
+          // Ana ayet
           Text(
             '"${_gununAyet!.translation}"',
-            style: TextStyle(
-              fontSize: 20,
+            style: const TextStyle(
+              fontSize: 18,
               color: Colors.white,
               fontWeight: FontWeight.bold,
               fontStyle: FontStyle.italic,
               height: 1.5,
             ),
           ),
-          if (_ayetSonraki != null) const SizedBox(height: 12),
-          if (_ayetSonraki != null)
+
+          // Sonraki ayet (eğer varsa)
+          if (_ayetSonraki != null) ...[
+            const SizedBox(height: 12),
             Text(
               '"${_ayetSonraki!.translation}"',
               style: TextStyle(
-                fontSize: 17,
-                color: Colors.white.withOpacity(0.5),
+                fontSize: 15,
+                color: Colors.white.withOpacity(0.4),
                 fontStyle: FontStyle.italic,
-                height: 1.5,
+                height: 1.4,
               ),
             ),
+          ],
+
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -191,7 +292,7 @@ class _AyetlerEkraniState extends State<AyetlerEkrani> {
             children: [
               Flexible(
                 child: Text(
-                  "${_gununAyetSuresi!.name} Suresi, ${_gununAyet!.verse}. Ayet",
+                  "${_gununAyetSuresi!.name} Suresi, ${_gununAyet!.id}. Ayet",
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.white.withOpacity(0.7),
@@ -201,16 +302,18 @@ class _AyetlerEkraniState extends State<AyetlerEkrani> {
               ),
               TextButton.icon(
                 style: TextButton.styleFrom(
-                    foregroundColor: Colors.white.withOpacity(0.8)),
-                icon: Icon(Icons.menu_book, size: 18),
-                label: Text("Surede Oku"),
+                  foregroundColor: Colors.white.withOpacity(0.8),
+                  backgroundColor: Colors.white.withOpacity(0.1),
+                ),
+                icon: const Icon(Icons.menu_book, size: 18),
+                label: const Text("Surede Oku"),
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => SureDetay_Ekrani(
                         sure: _gununAyetSuresi!,
-                        baslangicAyetIndex: _gununAyet!.verse - 1,
+                        baslangicAyetIndex: _gununAyetIndex,
                       ),
                     ),
                   );
@@ -240,7 +343,9 @@ class _AyetlerEkraniState extends State<AyetlerEkrani> {
           onTap: () {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                  content: Text('${konu['isim']} konusu yakında eklenecek.')),
+                content: Text('${konu['isim']} konusu yakında eklenecek.'),
+                backgroundColor: Colors.blue.shade900,
+              ),
             );
           },
           borderRadius: BorderRadius.circular(16.0),

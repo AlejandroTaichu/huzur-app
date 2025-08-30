@@ -25,7 +25,7 @@ class _SureDetay_EkraniState extends State<SureDetay_Ekrani> {
   final ItemPositionsListener _itemPositionsListener =
       ItemPositionsListener.create();
 
-  // YENİ: Favori ayetlerin ID'lerini tutacak bir set
+  // Favori ayetlerin ID'lerini tutacak bir set
   final Set<int> _favoriAyetler = {};
   final User? _user = FirebaseAuth.instance.currentUser;
 
@@ -44,26 +44,30 @@ class _SureDetay_EkraniState extends State<SureDetay_Ekrani> {
     _favorileriYukle(); // Ekran açıldığında mevcut favorileri yükle
   }
 
-  // YENİ: Firestore'dan mevcut favorileri çeken fonksiyon
+  // Firestore'dan mevcut favorileri çeken fonksiyon
   Future<void> _favorileriYukle() async {
     if (_user == null || _user!.isAnonymous) return;
 
-    final docRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(_user!.uid)
-        .collection('favori_ayetler')
-        .doc(widget.sure.chapter.toString());
+    try {
+      final docRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(_user!.uid)
+          .collection('favori_ayetler')
+          .doc(widget.sure.chapter.toString());
 
-    final doc = await docRef.get();
-    if (doc.exists && doc.data() != null) {
-      final ayetListesi = List<int>.from(doc.data()!['ayetler'] ?? []);
-      setState(() {
-        _favoriAyetler.addAll(ayetListesi);
-      });
+      final doc = await docRef.get();
+      if (doc.exists && doc.data() != null) {
+        final ayetListesi = List<int>.from(doc.data()!['ayetler'] ?? []);
+        setState(() {
+          _favoriAyetler.addAll(ayetListesi);
+        });
+      }
+    } catch (e) {
+      print("Favoriler yüklenirken hata: $e");
     }
   }
 
-  // YENİ: Bir ayeti favorilere ekleyen/kaldıran fonksiyon
+  // Bir ayeti favorilere ekleyen/kaldıran fonksiyon
   Future<void> _favoriToggle(int ayetNumarasi) async {
     if (_user == null || _user!.isAnonymous) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -73,42 +77,74 @@ class _SureDetay_EkraniState extends State<SureDetay_Ekrani> {
       return;
     }
 
-    final docRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(_user!.uid)
-        .collection('favori_ayetler')
-        .doc(widget.sure.chapter.toString());
+    try {
+      final docRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(_user!.uid)
+          .collection('favori_ayetler')
+          .doc(widget.sure.chapter.toString());
 
-    if (_favoriAyetler.contains(ayetNumarasi)) {
-      // Favorilerden kaldır
-      setState(() {
-        _favoriAyetler.remove(ayetNumarasi);
-      });
-      await docRef.update({
-        'ayetler': FieldValue.arrayRemove([ayetNumarasi])
-      });
-    } else {
-      // Favorilere ekle
-      setState(() {
-        _favoriAyetler.add(ayetNumarasi);
-      });
-      // SetOptions(merge: true) doküman yoksa oluşturur, varsa günceller
-      await docRef.set({
-        'sureAdi': widget.sure.name,
-        'sureNo': widget.sure.chapter,
-        'ayetler': FieldValue.arrayUnion([ayetNumarasi])
-      }, SetOptions(merge: true));
+      if (_favoriAyetler.contains(ayetNumarasi)) {
+        // Favorilerden kaldır
+        setState(() {
+          _favoriAyetler.remove(ayetNumarasi);
+        });
+        await docRef.update({
+          'ayetler': FieldValue.arrayRemove([ayetNumarasi])
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ayet favorilerden kaldırıldı')),
+        );
+      } else {
+        // Favorilere ekle
+        setState(() {
+          _favoriAyetler.add(ayetNumarasi);
+        });
+        // SetOptions(merge: true) doküman yoksa oluşturur, varsa günceller
+        await docRef.set({
+          'sureAdi': widget.sure.name,
+          'sureNo': widget.sure.chapter,
+          'ayetler': FieldValue.arrayUnion([ayetNumarasi])
+        }, SetOptions(merge: true));
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ayet favorilere eklendi')),
+        );
+      }
+    } catch (e) {
+      print("Favori işlemi sırasında hata: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bir hata oluştu')),
+      );
     }
   }
 
+  // Scroll pozisyonunu SharedPreferences'a kaydeden fonksiyon
   Future<void> _pozisyonKaydet() async {
-    // ... Bu fonksiyon aynı kalıyor
+    try {
+      final positions = _itemPositionsListener.itemPositions.value;
+      if (positions.isNotEmpty) {
+        // En üstteki görünür öğenin indeksini al
+        final topIndex = positions
+            .where((ItemPosition position) => position.itemTrailingEdge > 0)
+            .reduce((ItemPosition min, ItemPosition position) =>
+                position.itemLeadingEdge < min.itemLeadingEdge ? position : min)
+            .index;
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('sonOkunanSureNo', widget.sure.chapter);
+        await prefs.setInt('sonOkunanAyetIndex', topIndex);
+      }
+    } catch (e) {
+      print("Pozisyon kaydedilirken hata: $e");
+    }
   }
 
   @override
   void dispose() {
     _itemPositionsListener.itemPositions.removeListener(_pozisyonKaydet);
-    super.dispose(); // <-- BU SATIRI EKLEYİN
+    super.dispose();
   }
 
   @override
@@ -117,86 +153,143 @@ class _SureDetay_EkraniState extends State<SureDetay_Ekrani> {
       backgroundColor: const Color(0xFF0A0E27),
       appBar: AppBar(
         title: Text("${widget.sure.name} Suresi",
-            style: TextStyle(color: Colors.white)),
+            style: const TextStyle(color: Colors.white)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: ScrollablePositionedList.builder(
-        itemCount: widget.sure.verses.length,
-        itemScrollController: _scrollController,
-        itemPositionsListener: _itemPositionsListener,
-        itemBuilder: (context, index) {
-          final ayet = widget.sure.verses[index];
-          final isFavori = _favoriAyetler.contains(ayet.verse);
-
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.blue.withOpacity(0.1),
-                  Colors.purple.withOpacity(0.05),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16.0),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '${widget.sure.chapter}:${ayet.verse}',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade300,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: const Color(0xFF101439),
+                  title: Text(
+                    widget.sure.name,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sure No: ${widget.sure.chapter}',
+                        style: const TextStyle(color: Colors.white70),
                       ),
+                      Text(
+                        'Ayet Sayısı: ${widget.sure.verses.length}',
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                      Text(
+                        'İniş Yeri: ${widget.sure.revelation}',
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      child: const Text('Tamam'),
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
-                    // YENİ: Favori butonu
-                    IconButton(
-                      icon: Icon(
-                        isFavori ? Icons.favorite : Icons.favorite_border,
-                        color: isFavori ? Colors.pink.shade300 : Colors.white54,
-                      ),
-                      onPressed: () => _favoriToggle(ayet.verse),
-                    )
                   ],
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  ayet.text,
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                      fontSize: 26, fontFamily: 'Amiri', color: Colors.white),
-                ),
-                const Divider(
-                  height: 32,
-                  thickness: 1,
-                  color: Colors.white12,
-                ),
-                Text(
-                  ayet.translation,
-                  textAlign: TextAlign.left,
-                  style: TextStyle(
-                    fontSize: 17,
-                    color: Colors.white.withOpacity(0.8),
-                    fontStyle: FontStyle.italic,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ],
       ),
+      body: widget.sure.verses.isEmpty
+          ? const Center(
+              child: Text(
+                'Bu surede henüz ayet bulunmuyor',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            )
+          : ScrollablePositionedList.builder(
+              itemCount: widget.sure.verses.length,
+              itemScrollController: _scrollController,
+              itemPositionsListener: _itemPositionsListener,
+              itemBuilder: (context, index) {
+                final ayet = widget.sure.verses[index];
+                final isFavori =
+                    _favoriAyetler.contains(ayet.id); // verse yerine id
+
+                return Container(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.blue.withOpacity(0.1),
+                        Colors.purple.withOpacity(0.05),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16.0),
+                    border: Border.all(color: Colors.white.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${widget.sure.chapter}:${ayet.id}', // verse yerine id
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade300,
+                            ),
+                          ),
+                          // Favori butonu
+                          IconButton(
+                            icon: Icon(
+                              isFavori ? Icons.favorite : Icons.favorite_border,
+                              color: isFavori
+                                  ? Colors.pink.shade300
+                                  : Colors.white54,
+                            ),
+                            onPressed: () =>
+                                _favoriToggle(ayet.id), // verse yerine id
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        ayet.text,
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontFamily: 'Amiri',
+                          color: Colors.white,
+                          height: 1.8,
+                        ),
+                      ),
+                      const Divider(
+                        height: 32,
+                        thickness: 1,
+                        color: Colors.white12,
+                      ),
+                      Text(
+                        ayet.translation,
+                        textAlign: TextAlign.left,
+                        style: TextStyle(
+                          fontSize: 17,
+                          color: Colors.white.withOpacity(0.8),
+                          fontStyle: FontStyle.italic,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
     );
   }
 }
